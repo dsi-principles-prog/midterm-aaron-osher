@@ -1,0 +1,67 @@
+---
+title: "30_feature_engineering"
+output: html_notebook
+---
+
+# Feature 2 - Grouping patients my standard medical age groups
+
+So I did some research on standard medical age groups...There is a lot of information out there. I'm using here what the following paper suggested was the past standard for medical age groups. These can be updated as desired.
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3825015/
+
+This feature should help in making sense of how the data changes by age. If we know teenagers often do something it will be easier to see than to have to model on a selection of years. It will just be already built in.
+
+```{r Bin Patients Ages}
+agebinner <- function(df, var) {
+  df %>%
+    mutate(age_group = findInterval({{var}}, c(2, 6, 14, 19, 34, 49, 65, 79, 99, 120, 201, 223), rightmost.closed = TRUE))
+    #df$age_group <- as.factor(df$age_group) 
+  #Could not get it work, letting me convert to a factor in this function...The select below kept failing
+}
+```
+
+## Testing Age Binning Function
+```{r Age Bin Test}
+neiss1999 %>% 
+  agebinner(age) %>% 
+  select(age_group, everything()) %>% 
+  arrange(-age_group)
+```
+Age Binning worked, though, it might be a bit confusing to read later due to the findInterval function.
+
+
+
+
+# Feature 4 - Adding Seasonal Information
+
+There were a few options here as far as adding a season column:
+https://en.wikipedia.org/wiki/Season
+
+My initial thought was to use the solstice/equinoxes. This is a little challanging as the dates change every year. But, as the dataset includes information from all over the US being incredibly technical about season dates seems unnecessary and cumbersome, so we will use the "Meteorological" definition of seasons as found in the above wikipedia page. These are easier to work with as they are standard year to year.
+
+
+Seasons affect whether people are outdoors or indoors, or maybe it is too cold to drive to the hospital, I believe this will play in to trends in hospital visits.
+
+```{r Feature 4 Assigning Seasons}
+seasons <- function(x){
+  if(x %in% 2:4) return("Spring")
+  if(x %in% 5:7) return("Summer")
+  if(x %in% 8:10) return("Fall")
+  if(x %in% c(11,12,1)) return("Winter")
+}
+
+assign_season <- function(df, var){
+  df %>% 
+  mutate(season = sapply(month({{var}}), seasons))
+}
+```
+
+## Testing Feature 4, seasonal identifier
+```{r Testing Assigned Season Function}
+neiss1999 %>% 
+  assign_season(treatment_date) %>% 
+  select(season, everything()) %>% 
+  assert(in_set(c("Spring", "Summer", "Fall", "Winter")))
+```
+
+

@@ -1,0 +1,165 @@
+---
+title: "11_import-clean"
+output: html_notebook
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# The Data
+
+Every year, the U.S. Consumer Product Safety Commission tracks emergency rooms visits to approximately 100 hospitals. The commission uses the resulting National Electronic Injury Surveillance System data to estimate national injury statistics, but it also publishes anonymized information for each consumer product–related visit, including the associated product code (e.g., 1701: “Artificial Christmas trees”) and a short narrative (“71 YO WM FRACTURED HIP WHEN GOT DIZZY AND FELL TAKING DOWN CHRISTMAS TREE AT HOME”). Here we are going to explore this data and see if we can find some interesting trends.
+
+The NEISS injury data are gathered from the emergency departments (ED) of approximately 100 hospitals selected as a probability sample of all 5,000+ U.S. hospitals with emergency departments. The data set is large, it is long data with almost 7.5 million observations over 20 years. The data contains 19 variables, these include a unique identifier, the date of the incident, the patients age, gender, race, codes designating the event and a short text description. 
+
+## Motivating Question
+
+So! There is a lot of data regarding how people get injured. I'm really curious if the hospital emergency department could be more efficient if it could predict the types of injuries and individuals arriving on any given day. I think there is value in both staffing, supplies, etc. So here we will look at some data about hospital emergency room events and try to use it to generate a model that can be used to predict incoming patients.
+
+# Libraries
+```{r Libraries}
+library(tidyverse)
+library(janitor)
+library(fs)
+library(lubridate)
+library(data.table)
+library(assertr)
+library(naniar)
+```
+
+### NEISS Injury Data
+
+# Imports Cleaning and Organizing
+
+First we are going to want to pull in the data, then we will clean it up and get it in a state where we can start applying features.
+
+## Importing
+
+We need to import the raw NEISS data. For assignment 4 I am only looking at a single year of data. But for future work I intend to look at the data as it changes over the 20 years available.
+
+### Code Indecises
+
+Much of the data is encoded, in order to make it understandable to a human we are going to use the following data to join readable names to the data set. The data is organized below.
+
+```{r code references import}
+coderef <- read_delim("data/code-ref/neiss-coderef.txt", 
+    "\t", escape_double = FALSE, trim_ws = TRUE) %>% clean_names()
+```
+## Organizing
+
+I was originally generating the data decoding tables myself before coming across this document. Unfortunately it was a single document with all of the decoding in one table.
+I needed to break it up into decoders for each column. This is done here:
+
+```{r Code References Splitting}
+coderefsplit <- coderef %>%
+  group_by(format_name) %>%
+  group_split() %>%
+  set_names(unique(coderef$format_name))
+  
+age <- coderefsplit$AGELTTWO %>% 
+  select(starting_value = starting_value_for_format, ending_value = ending_value_for_format, label = format_value_label)
+
+bodypart <- coderefsplit$BDYPT %>% 
+  select(code = starting_value_for_format, desc = format_value_label)
+
+diagnosis <- coderefsplit$DIAG %>% 
+  select(code = starting_value_for_format, desc = format_value_label)
+
+disposition <- coderefsplit$DISP %>% 
+  select(code = starting_value_for_format, desc = format_value_label)
+
+fire_involve <- coderefsplit$FIRE %>% 
+  select(code = starting_value_for_format, fire_involve = format_value_label)
+
+gender <- coderefsplit$GENDER %>% 
+  select(code = starting_value_for_format, gender = format_value_label)
+
+location <- coderefsplit$LOC %>% 
+  select(code = starting_value_for_format, location = format_value_label)
+
+race <- coderefsplit$RACE %>% 
+  select(code = starting_value_for_format, race = format_value_label)
+
+product_ref <- coderefsplit$PROD %>% 
+  select(code = starting_value_for_format, product = format_value_label)
+```
+
+## Importing the NEISS data. This is the raw data from NEISS
+```{r Raw Data Import}
+
+neiss1999 <- read_delim("data/neiss1999.tsv", 
+    "\t", escape_double = FALSE, col_types = cols(Age = col_character(), 
+        CPSC_Case_Number = col_character(), 
+        Other_Diagnosis = col_double()), 
+    na = "NA", trim_ws = TRUE) %>% 
+    clean_names() %>% 
+    clean_neiss()
+  
+```
+
+```{r}
+neiss1999 <- neiss1999 %>% 
+  select(-c(narrative_1, narrative_2, stratum, psu, other_race))
+```
+
+A function to fix an issue with the raw data. 
+
+So... Having done the above, I now know how to fix the problems on import. Solving it this way lost us a bit of Narrative_1 and the Stratum value, though I am not sure what Stratum even is. When I work on importing all years I will write code to fix on import avoiding this loss of data.
+
+```{r }
+clean_neiss <- function(df){
+  for(i in seq_along(nrow(df))) { 
+  if(is.na(as.numeric(df[[i,1]]))){
+    df$narrative_1[i-1] <- paste0(df$narrative_1[[i-1]]," ", df$cpsc_case_number[[i]])
+    df$narrative_2[i - 1] <- df$treatment_date[i]
+    df$psu[i - 1] <- df$sex[i]
+    df$weight[i - 1] <- df$race[i]
+    #neiss <- neiss[-c(i),] #Why did this not work?
+    df <- subset(df, !df[i,])
+  }
+}
+
+df <- subset(df, !is.na(as.numeric(df$cpsc_case_number)))
+
+}
+```
+
+```{r Cleaning Data}
+#Solves issue of the 5 0's mentioned below
+neiss1999 <- neiss1999 %>% replace_with_na(replace = list(product_2 = 0))
+
+#Converting Date to a date time, waited until here because there was bad data in this field up until this point
+neiss1999 <- neiss1999 %>% 
+  mutate(treatment_date = mdy(treatment_date))
+```
+
+# Import Asserts
+```{r Assertions, error=TRUE}
+
+neiss1999 %>%
+  assert(is_uniq(neiss1999$cpsc_case_number))
+neiss1999 %>%
+  assert(in_set(age$starting_value, 2:120), age)
+neiss1999 %>%
+    assert(in_set(c(0:3)), sex)
+neiss1999 %>%
+  assert(in_set(race$code), race)
+neiss1999 %>%
+  assert(in_set(bodypart$code), body_part)
+neiss1999 %>%
+  assert(in_set(diagnosis$code), diagnosis)
+neiss1999 %>%
+  assert(in_set(disposition$code), disposition)
+neiss1999 %>%
+  assert(in_set(location$code), location) 
+neiss1999 %>%
+  assert(in_set(fire_involve$code), fire_involvement)
+neiss1999 %>%
+  assert(in_set(product_ref$code), product_1)
+neiss1999 %>%
+  assert(in_set(product_ref$code), product_2)
+neiss1999 %>%
+  assert(within_bounds(0,200), weight)
+
+```

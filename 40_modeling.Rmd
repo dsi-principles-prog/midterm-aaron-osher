@@ -1,0 +1,17 @@
+---
+title: "40_modeling"
+output: html_notebook
+---
+
+#Modeling
+We now take our data, apply our features, remove the unecessary columns and output a data set ready to model.
+```{r}
+neiss1999_model <-  neiss1999 %>% 
+  addwday(treatment_date) %>% 
+  agebinner(age) %>% 
+  daily_counter(treatment_date) %>% 
+  assign_season(treatment_date)
+```
+
+
+
