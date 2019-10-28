@@ -4,10 +4,13 @@ Every year, the U.S. Consumer Product Safety Commission tracks emergency rooms v
 
 The NEISS injury data is gathered from the emergency departments (ED) of approximately 100 hospitals selected as a probability sample of all 5,000+ U.S. hospitals with emergency departments. The data set is large, it is long data with almost 7.5 million observations over 20 years. The data contains 19 variables, these include a unique identifier, the date of the incident, the patients age, gender, race, codes designating the event and a short text description. 
 
+
 You can find more about the data here:
 https://www.cpsc.gov/Research--Statistics/NEISS-Injury-Data
+&nbsp;
+&nbsp;
 
-Each row is an individual case of a patient coming in to the emergency room. For the purpose of our exploration we will be focusing on the data from 1999
+Each row is an individual case of a patient coming in to the emergency room. For the purpose of our exploration we will be focusing on the data from 1999 though 20 years of data is available.
 
 The data set contains the following columns:
 
@@ -31,4 +34,4 @@ The data set contains the following columns:
 | weight   | num    | patients weight |
 
 
-For all of the columns labeled with 'identifier' can be found in the misc folder. The all of the data is encoded in there. I opted not to include it here as it is quite long.
+For all of the columns labeled with 'identifier' the corresponding labels can be found in the pdf in the misc folder. I opted not to include it here as it is quite long.
