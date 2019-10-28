@@ -3,7 +3,7 @@ title: "30_feature_engineering"
 output: html_notebook
 ---
 
-# Feature 2 - Grouping patients my standard medical age groups
+# Feature 1 - Grouping patients my standard medical age groups
 
 So I did some research on standard medical age groups...There is a lot of information out there. I'm using here what the following paper suggested was the past standard for medical age groups. These can be updated as desired.
 
@@ -30,9 +30,7 @@ neiss1999 %>%
 Age Binning worked, though, it might be a bit confusing to read later due to the findInterval function.
 
 
-
-
-# Feature 4 - Adding Seasonal Information
+# Feature 2 - Adding Seasonal Information
 
 There were a few options here as far as adding a season column:
 https://en.wikipedia.org/wiki/Season
@@ -64,4 +62,14 @@ neiss1999 %>%
   assert(in_set(c("Spring", "Summer", "Fall", "Winter")))
 ```
 
+===================================================
+Add new feature here: Feature 3 or Feature 4
+===================================================
+# Feature 3 - Appending a Daily count to each observation
+Very important to what I'm trying to explore is the amount of visits per day, this feature is going to add a column which attaches the totals by day to each date.
 
+
+
+# Feature 4 - Add the weekday to the data
+
+Weekday information is always useful when trying to figure out when things happen. People behave differently depending on where they are in the week. Preliminary exploration of the data found a significant drop in visits on Fridays, and significant increases on Saturday and Sunday.
