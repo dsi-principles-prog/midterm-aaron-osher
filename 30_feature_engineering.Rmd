@@ -5,18 +5,16 @@ output: html_notebook
 
 # Feature 1 - Grouping patients my standard medical age groups
 
-So I did some research on standard medical age groups...There is a lot of information out there. I'm using here what the following paper suggested was the past standard for medical age groups. These can be updated as desired.
+So I did some research on standard medical age groups...There is a lot of information out there. I'm using here what the following paper suggested was the past standard for medical age groups. These can be updated as desired, these are used here as a baseline.
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3825015/
 
-This feature should help in making sense of how the data changes by age. If we know teenagers often do something it will be easier to see than to have to model on a selection of years. It will just be already built in.
+This feature should help in making sense of how the data changes by age. If we know teenagers often do something it will be easier to see than to have to model on a selection of years. It will now be built in.
 
 ```{r Bin Patients Ages}
 agebinner <- function(df, var) {
   df %>%
     mutate(age_group = findInterval({{var}}, c(2, 6, 14, 19, 34, 49, 65, 79, 99, 120, 201, 223), rightmost.closed = TRUE))
-    #df$age_group <- as.factor(df$age_group) 
-  #Could not get it work, letting me convert to a factor in this function...The select below kept failing
 }
 ```
 
@@ -25,9 +23,11 @@ agebinner <- function(df, var) {
 neiss1999 %>% 
   agebinner(age) %>% 
   select(age_group, everything()) %>% 
-  arrange(-age_group)
+  arrange(-age_group) %>% 
+  assert(in_set(1:11)) #the function puts ages in to 11 bins, this confirms that it is one of those 11.
 ```
-Age Binning worked, though, it might be a bit confusing to read later due to the findInterval function.
+The Age binning is working as intended.
+NOTE: Bins 10 and 11 correspond to infants between 0-12 and 12-24 months. 
 
 
 # Feature 2 - Adding Seasonal Information
@@ -39,7 +39,6 @@ My initial thought was to use the solstice/equinoxes. This is a little challangi
 
 
 Seasons affect whether people are outdoors or indoors, or maybe it is too cold to drive to the hospital, I believe this will play in to trends in hospital visits.
-
 ```{r Feature 4 Assigning Seasons}
 seasons <- function(x){
   if(x %in% 2:4) return("Spring")

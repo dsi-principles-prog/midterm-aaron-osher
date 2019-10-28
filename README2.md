@@ -11,7 +11,7 @@ So! There is a lot of data regarding how people get injured. I'm really curious 
 The data set contains the following columns:
 
 - cpsc_case_number char
-- treatment_date   Posix
+- treatment_date   Posix xt
 - age              char
 - sex              num
 - race             num

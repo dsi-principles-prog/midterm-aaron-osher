@@ -7,15 +7,9 @@ output: html_notebook
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
-# The Data
+# Motivating Question
 
-Every year, the U.S. Consumer Product Safety Commission tracks emergency rooms visits to approximately 100 hospitals. The commission uses the resulting National Electronic Injury Surveillance System data to estimate national injury statistics, but it also publishes anonymized information for each consumer product–related visit, including the associated product code (e.g., 1701: “Artificial Christmas trees”) and a short narrative (“71 YO WM FRACTURED HIP WHEN GOT DIZZY AND FELL TAKING DOWN CHRISTMAS TREE AT HOME”). Here we are going to explore this data and see if we can find some interesting trends.
-
-The NEISS injury data are gathered from the emergency departments (ED) of approximately 100 hospitals selected as a probability sample of all 5,000+ U.S. hospitals with emergency departments. The data set is large, it is long data with almost 7.5 million observations over 20 years. The data contains 19 variables, these include a unique identifier, the date of the incident, the patients age, gender, race, codes designating the event and a short text description. 
-
-## Motivating Question
-
-So! There is a lot of data regarding how people get injured. I'm really curious if the hospital emergency department could be more efficient if it could predict the types of injuries and individuals arriving on any given day. I think there is value in both staffing, supplies, etc. So here we will look at some data about hospital emergency room events and try to use it to generate a model that can be used to predict incoming patients.
+There is a lot of data regarding how people get injured. I'm really curious if the hospital emergency department could be more efficient if it could predict the types of injuries and individuals arriving on any given day. I think there is value in both staffing, supplies, etc. So here we will look at some data about hospital emergency room events and try to use it to generate a model that can be used to predict incoming patients.
 
 # Libraries
 ```{r Libraries}
@@ -25,10 +19,11 @@ library(fs)
 library(lubridate)
 library(data.table)
 library(assertr)
+#install.packages("naniar")
 library(naniar)
 ```
 
-### NEISS Injury Data
+# NEISS Injury Data
 
 # Imports Cleaning and Organizing
 
@@ -36,7 +31,7 @@ First we are going to want to pull in the data, then we will clean it up and get
 
 ## Importing
 
-We need to import the raw NEISS data. For assignment 4 I am only looking at a single year of data. But for future work I intend to look at the data as it changes over the 20 years available.
+We need to import the raw NEISS data, as well as a dataframe with how the data is encoded.
 
 ### Code Indecises
 
@@ -48,8 +43,8 @@ coderef <- read_delim("data/code-ref/neiss-coderef.txt",
 ```
 ## Organizing
 
-I was originally generating the data decoding tables myself before coming across this document. Unfortunately it was a single document with all of the decoding in one table.
-I needed to break it up into decoders for each column. This is done here:
+Unfortunately the coding is a single table. I needed to break it up into decoders for each column of data in the dataset.
+This is done here:
 
 ```{r Code References Splitting}
 coderefsplit <- coderef %>%
@@ -85,29 +80,10 @@ product_ref <- coderefsplit$PROD %>%
   select(code = starting_value_for_format, product = format_value_label)
 ```
 
-## Importing the NEISS data. This is the raw data from NEISS
-```{r Raw Data Import}
+I identified an issue with the data. The following is a function that fixes the issue, it is called during the import to correct for some data that gets split between to rows.
 
-neiss1999 <- read_delim("data/neiss1999.tsv", 
-    "\t", escape_double = FALSE, col_types = cols(Age = col_character(), 
-        CPSC_Case_Number = col_character(), 
-        Other_Diagnosis = col_double()), 
-    na = "NA", trim_ws = TRUE) %>% 
-    clean_names() %>% 
-    clean_neiss()
-  
-```
 
-```{r}
-neiss1999 <- neiss1999 %>% 
-  select(-c(narrative_1, narrative_2, stratum, psu, other_race))
-```
-
-A function to fix an issue with the raw data. 
-
-So... Having done the above, I now know how to fix the problems on import. Solving it this way lost us a bit of Narrative_1 and the Stratum value, though I am not sure what Stratum even is. When I work on importing all years I will write code to fix on import avoiding this loss of data.
-
-```{r }
+```{r function to fix broken lines}
 clean_neiss <- function(df){
   for(i in seq_along(nrow(df))) { 
   if(is.na(as.numeric(df[[i,1]]))){
@@ -124,7 +100,33 @@ df <- subset(df, !is.na(as.numeric(df$cpsc_case_number)))
 
 }
 ```
+Solving it this way lost us a bit of Narrative_1 and the Stratum value, though I am not sure what Stratum even is. We will drop this column after import.
 
+
+
+## Importing the NEISS data. This is the raw data from NEISS
+```{r Raw Data Import}
+
+neiss1999 <- read_delim("data/neiss1999.tsv", 
+    "\t", escape_double = FALSE, col_types = cols(Age = col_character(), 
+        CPSC_Case_Number = col_character(), 
+        Other_Diagnosis = col_double()), 
+    na = "NA", trim_ws = TRUE) %>% 
+    clean_names() %>% #clean the names of the data
+    clean_neiss() #This function is below 
+  
+```
+Ignore this, error, it is working as intended, this is an artifact of the cleaning function.
+
+Dropping the columns we will not need.
+```{r drop unecessary columns}
+neiss1999 <- neiss1999 %>% 
+  select(-c(narrative_1, narrative_2, stratum, psu, other_race))
+```
+
+
+There were a couple of rogue data points in the product_2 column these are delt with here.
+Additionally we convert the treatment_date column into an actual date time column. We wait to do that here as the problem described above (in the clean_neiss function) required importing the column as a character type.
 ```{r Cleaning Data}
 #Solves issue of the 5 0's mentioned below
 neiss1999 <- neiss1999 %>% replace_with_na(replace = list(product_2 = 0))
@@ -134,7 +136,7 @@ neiss1999 <- neiss1999 %>%
   mutate(treatment_date = mdy(treatment_date))
 ```
 
-# Import Asserts
+# Import Asserts - This chunk runs import asserts on the data. It uses the encoding data from the first document imported and confirms that all of the data in the data set meets these required values.
 ```{r Assertions, error=TRUE}
 
 neiss1999 %>%

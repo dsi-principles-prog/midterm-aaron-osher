@@ -4,13 +4,12 @@ output: html_notebook
 ---
 
 #Modeling
-We now take our data, apply our features, remove the unecessary columns and output a data set ready to model.
+We now take our data, apply our features, and then select the newly added columns to move them to the front of our data set.
 ```{r}
 neiss1999_model <-  neiss1999 %>% 
-  addwday(treatment_date) %>% 
   agebinner(age) %>% 
-  daily_counter(treatment_date) %>% 
-  assign_season(treatment_date)
+  assign_season(treatment_date) %>% 
+  select(age_group, season, everything())
 ```
 
 
