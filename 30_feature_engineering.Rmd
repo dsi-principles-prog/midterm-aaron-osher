@@ -67,7 +67,16 @@ Add new feature here: Feature 3 or Feature 4
 # *Feature 3* - Appending a Daily count to each observation
 Very important to what I'm trying to explore is the amount of visits per day, this feature is going to add a column which attaches the totals by day to each date.
 
+```{r}
+daily_count <- function(df, var) {
+  df %>%
+    group_by({{var}}) %>%
+    mutate(daily_visits = n())
+}
+```
 
 
 # *Feature 4* - Add the weekday to the data
 Weekday information is always useful when trying to figure out when things happen. People behave differently depending on where they are in the week. Preliminary exploration of the data found a significant drop in visits on Fridays, and significant increases on Saturday and Sunday.
+
+

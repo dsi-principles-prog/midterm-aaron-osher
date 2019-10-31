@@ -9,6 +9,7 @@ We now take our data, apply our features, and then select the newly added column
 neiss1999_model <-  neiss1999 %>% 
   agebinner(age) %>% 
   assign_season(treatment_date) %>% 
+  daily_count(treatment_date) %>%
   select(age_group, season, everything())
 ```
 
